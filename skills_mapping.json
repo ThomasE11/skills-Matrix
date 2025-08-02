@@ -1,0 +1,145 @@
+{
+  "document_title": "Skills Laboratory 01/B102",
+  "subjects": [
+    {
+      "level": "EMT-Basic",
+      "code": "HEM1103",
+      "description": "Emergency Medical Technician - Basic Level",
+      "skills": [
+        "Handwashing",
+        "Basic Airway Maneuver",
+        "Oropharyngeal Suctioning",
+        "Bag Valve Mask (BVM) Ventilation",
+        "OP Airway Insertion",
+        "NP Airway Insertion",
+        "Choking – Adult",
+        "Basic Life Support with AED",
+        "Recovery Position",
+        "Nebulization",
+        "Baseline Observations",
+        "Hemoglucose Test (HGT)",
+        "Pre-Alert (ASHICE)",
+        "Bandage Application",
+        "Splinting a Fracture",
+        "Triangular Bandage Use",
+        "Exsanguinating Hemorrhage"
+      ],
+      "skill_count": 17
+    },
+    {
+      "level": "Paramedic",
+      "codes": ["HEM2105", "HEM2024", "HEM2033"],
+      "description": "Intermediate Paramedic Level",
+      "skills": [
+        "Supraglottic Airway Insertion (LMA/iGEL)",
+        "Suctioning – ETT or SGA",
+        "Intermediate Life Support – Adult",
+        "Intravenous Cannulation (IV)",
+        "Needle Thoracocentesis (Chest Decompression)",
+        "Cervical Spine Clearance",
+        "Traction Splint",
+        "Pelvic Binder Application",
+        "Drug Administration"
+      ],
+      "skill_count": 9
+    },
+    {
+      "level": "Advanced Paramedic",
+      "codes": ["HEM3006", "HEM3106", "HEM4106"],
+      "description": "Advanced Paramedic Level",
+      "skills": [
+        "Predicting Difficult BVM Ventilations",
+        "Predicting Difficult Intubation",
+        "Intubation – Adult",
+        "Orogastric & Nasogastric tube insertion",
+        "Surgical Cricothyroidotomy (Front of Neck Access)",
+        "External Jugular Vein Cannulation (EJVC)",
+        "Advanced Life Support Adult",
+        "Advanced Life Support Infant",
+        "Advanced Life Support Child",
+        "Intraosseous Access",
+        "Carotid Sinus Massage",
+        "Valsalva Maneuver",
+        "Synchronized Cardioversion",
+        "Transcutaneous Pacing",
+        "CPAP",
+        "EtCO2",
+        "Transport Ventilator",
+        "Ventilator Alarm Troubleshooting"
+      ],
+      "skill_count": 18
+    }
+  ],
+  "hierarchical_relationships": [
+    {
+      "relationship_type": "progressive_training_levels",
+      "description": "Skills are organized in progressive complexity from EMT-Basic to Advanced Paramedic",
+      "hierarchy": [
+        {
+          "level": 1,
+          "name": "EMT-Basic",
+          "code": "HEM1103",
+          "prerequisite_for": ["Paramedic"]
+        },
+        {
+          "level": 2,
+          "name": "Paramedic",
+          "codes": ["HEM2105", "HEM2024", "HEM2033"],
+          "prerequisite_for": ["Advanced Paramedic"],
+          "requires": ["EMT-Basic"]
+        },
+        {
+          "level": 3,
+          "name": "Advanced Paramedic",
+          "codes": ["HEM3006", "HEM3106", "HEM4106"],
+          "requires": ["EMT-Basic", "Paramedic"]
+        }
+      ]
+    }
+  ],
+  "subject_skill_mapping": {
+    "HEM1103": [
+      "Handwashing", "Basic Airway Maneuver", "Oropharyngeal Suctioning",
+      "Bag Valve Mask (BVM) Ventilation", "OP Airway Insertion", "NP Airway Insertion",
+      "Choking – Adult", "Basic Life Support with AED", "Recovery Position",
+      "Nebulization", "Baseline Observations", "Hemoglucose Test (HGT)",
+      "Pre-Alert (ASHICE)", "Bandage Application", "Splinting a Fracture",
+      "Triangular Bandage Use", "Exsanguinating Hemorrhage"
+    ],
+    "HEM2105": [
+      "Supraglottic Airway Insertion (LMA/iGEL)", "Suctioning – ETT or SGA",
+      "Intermediate Life Support – Adult"
+    ],
+    "HEM2024": [
+      "Intravenous Cannulation (IV)", "Needle Thoracocentesis (Chest Decompression)",
+      "Cervical Spine Clearance"
+    ],
+    "HEM2033": [
+      "Traction Splint", "Pelvic Binder Application", "Drug Administration"
+    ],
+    "HEM3006": [
+      "Predicting Difficult BVM Ventilations", "Predicting Difficult Intubation",
+      "Intubation – Adult", "Orogastric & Nasogastric tube insertion",
+      "Surgical Cricothyroidotomy (Front of Neck Access)", "External Jugular Vein Cannulation (EJVC)"
+    ],
+    "HEM3106": [
+      "Advanced Life Support Adult", "Advanced Life Support Infant",
+      "Advanced Life Support Child", "Intraosseous Access", "Carotid Sinus Massage",
+      "Valsalva Maneuver"
+    ],
+    "HEM4106": [
+      "Synchronized Cardioversion", "Transcutaneous Pacing", "CPAP",
+      "EtCO2", "Transport Ventilator", "Ventilator Alarm Troubleshooting"
+    ]
+  },
+  "summary": {
+    "total_subjects": 7,
+    "total_skills": 44,
+    "training_levels": 3,
+    "skills_by_level": {
+      "EMT-Basic": 17,
+      "Paramedic": 9,
+      "Advanced Paramedic": 18
+    }
+  }
+}
