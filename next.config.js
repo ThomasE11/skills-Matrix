@@ -8,12 +8,43 @@ const nextConfig = {
     outputFileTracingRoot: path.join(__dirname, '../'),
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    dirs: ['app', 'components', 'lib', 'hooks'],
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
-  images: { unoptimized: true },
+  images: {
+    unoptimized: process.env.NODE_ENV === 'development',
+    formats: ['image/webp', 'image/avif'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+  },
+  // Enable SWC minification for better performance
+  swcMinify: true,
+  // Disable X-Powered-By header for security
+  poweredByHeader: false,
+  // Enable compression
+  compress: true,
+  // Disable source maps in production for smaller bundle
+  productionBrowserSourceMaps: false,
+  // Optimize webpack bundle
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.optimization.splitChunks = {
+        ...config.optimization.splitChunks,
+        cacheGroups: {
+          ...config.optimization.splitChunks?.cacheGroups,
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendor',
+            chunks: 'all',
+            priority: 10,
+          },
+        },
+      };
+    }
+    return config;
+  },
 };
 
 module.exports = nextConfig;

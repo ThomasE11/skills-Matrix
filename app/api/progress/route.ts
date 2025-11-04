@@ -9,14 +9,13 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    // Temporarily allow without authentication for testing
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || session?.user?.id || 'student-1';
+    const userId = searchParams.get('userId') || session.user.id;
     const isPreviewMode = request.headers.get('X-Preview-Mode') === 'true';
 
     // Students can only access their own progress
@@ -113,11 +112,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    // Temporarily allow without authentication for testing
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const { skillId, status, completedSteps, timeSpent, selfAssessmentScore } = await request.json();
     const isPreviewMode = request.headers.get('X-Preview-Mode') === 'true';
@@ -125,7 +123,7 @@ export async function POST(request: NextRequest) {
     // Mock progress update
     const mockUpdatedProgress = {
       id: `progress-${skillId}`,
-      userId: session?.user?.id || 'student-1',
+      userId: session.user.id,
       skillId,
       status: status as ProgressStatus,
       completedCount: completedSteps?.length || 0,

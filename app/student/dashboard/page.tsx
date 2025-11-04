@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -22,11 +22,7 @@ export default function StudentDashboard() {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [categoriesResponse, progressResponse] = await Promise.all([
         fetch('/api/categories?includeSkills=true'),
@@ -91,27 +87,35 @@ export default function StudentDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const progressData = [
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Memoize expensive chart data calculations
+  const progressData = useMemo(() => [
     { name: 'Completed', value: stats.completedSkills, color: '#4ade80' },
     { name: 'Mastered', value: stats.masteredSkills, color: '#06b6d4' },
     { name: 'In Progress', value: stats.inProgressSkills, color: '#f59e0b' },
     { name: 'Not Started', value: stats.totalSkills - stats.completedSkills - stats.masteredSkills - stats.inProgressSkills, color: '#6b7280' },
-  ];
+  ], [stats.completedSkills, stats.masteredSkills, stats.inProgressSkills, stats.totalSkills]);
 
-  const categoryData = Array.isArray(categories) ? categories.map(cat => ({
-    name: cat.name || 'Unknown',
-    total: Array.isArray(cat.skills) ? cat.skills.length : 0,
-    completed: Array.isArray(cat.skills) ? cat.skills.filter(skill => 
-      skill.progress?.status === 'COMPLETED' || skill.progress?.status === 'MASTERED'
-    ).length : 0,
-  })) : [];
+  const categoryData = useMemo(() =>
+    Array.isArray(categories) ? categories.map(cat => ({
+      name: cat.name || 'Unknown',
+      total: Array.isArray(cat.skills) ? cat.skills.length : 0,
+      completed: Array.isArray(cat.skills) ? cat.skills.filter(skill =>
+        skill.progress?.status === 'COMPLETED' || skill.progress?.status === 'MASTERED'
+      ).length : 0,
+    })) : []
+  , [categories]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-96" role="status" aria-live="polite" aria-busy="true">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" aria-hidden="true"></div>
+        <span className="sr-only">Loading dashboard...</span>
       </div>
     );
   }
@@ -235,8 +239,8 @@ export default function StudentDashboard() {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {progressData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  {progressData.map((entry) => (
+                    <Cell key={entry.name} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip />

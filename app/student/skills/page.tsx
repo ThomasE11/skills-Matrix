@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,12 +11,12 @@ import { Search, Clock, Star, AlertCircle, CheckCircle, Play } from 'lucide-reac
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CategoryWithSkills, SkillWithProgress, SubjectWithSkills, SkillWithSubjects } from '@/lib/types';
+import { getStatusColor, getDifficultyColor } from '@/lib/ui-utils';
 
 export default function StudentSkills() {
   const searchParams = useSearchParams();
   const [subjects, setSubjects] = useState<SubjectWithSkills[]>([]);
   const [allSkills, setAllSkills] = useState<SkillWithSubjects[]>([]);
-  const [filteredSkills, setFilteredSkills] = useState<SkillWithSubjects[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -24,23 +24,7 @@ export default function StudentSkills() {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  // Set initial category filter from URL parameters
-  useEffect(() => {
-    const categoryParam = searchParams.get('category');
-    if (categoryParam) {
-      setSelectedCategory(categoryParam);
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
-    filterSkills();
-  }, [allSkills, searchTerm, selectedSubject, selectedCategory, selectedDifficulty, selectedStatus]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const response = await fetch('/api/student/enrolled-skills');
       const data = await response.json();
@@ -51,45 +35,63 @@ export default function StudentSkills() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const filterSkills = () => {
-    let filtered = [...allSkills];
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-    if (searchTerm) {
-      filtered = filtered.filter(skill =>
-        skill.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        skill.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+  // Set initial category filter from URL parameters
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
     }
+  }, [searchParams]);
 
-    if (selectedSubject !== 'all') {
-      filtered = filtered.filter(skill => 
-        skill.subjects?.some(subjectSkill => 
-          subjectSkill.subjectId === parseInt(selectedSubject)
-        )
-      );
-    }
+  // Memoize filtered skills to avoid recalculation on every render
+  const filteredSkills = useMemo(() => {
+    return allSkills.filter(skill => {
+      // Search term filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        if (!skill.name.toLowerCase().includes(searchLower) &&
+            !skill.description.toLowerCase().includes(searchLower)) {
+          return false;
+        }
+      }
 
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(skill => skill.categoryId === selectedCategory);
-    }
+      // Subject filter
+      if (selectedSubject !== 'all') {
+        const subjectId = parseInt(selectedSubject, 10);
+        if (!skill.subjects?.some(subjectSkill => subjectSkill.subjectId === subjectId)) {
+          return false;
+        }
+      }
 
-    if (selectedDifficulty !== 'all') {
-      filtered = filtered.filter(skill => skill.difficultyLevel === selectedDifficulty);
-    }
+      // Category filter
+      if (selectedCategory !== 'all' && skill.categoryId !== selectedCategory) {
+        return false;
+      }
 
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(skill => {
+      // Difficulty filter
+      if (selectedDifficulty !== 'all' && skill.difficultyLevel !== selectedDifficulty) {
+        return false;
+      }
+
+      // Status filter
+      if (selectedStatus !== 'all') {
         const status = skill.progress?.status || 'NOT_STARTED';
-        return status === selectedStatus;
-      });
-    }
+        if (status !== selectedStatus) {
+          return false;
+        }
+      }
 
-    setFilteredSkills(filtered);
-  };
+      return true;
+    });
+  }, [allSkills, searchTerm, selectedSubject, selectedCategory, selectedDifficulty, selectedStatus]);
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = useCallback((status: string) => {
     switch (status) {
       case 'COMPLETED':
         return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
@@ -100,38 +102,13 @@ export default function StudentSkills() {
       default:
         return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
     }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-      case 'MASTERED':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
-      case 'IN_PROGRESS':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300';
-    }
-  };
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'BEGINNER':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-      case 'INTERMEDIATE':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
-      case 'ADVANCED':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300';
-    }
-  };
+  }, []);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-96" role="status" aria-live="polite" aria-busy="true">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" aria-hidden="true"></div>
+        <span className="sr-only">Loading skills...</span>
       </div>
     );
   }

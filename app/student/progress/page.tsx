@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, Clock, TrendingUp, Star, BookOpen, BarChart3, CheckCircle, AlertCircle } from 'lucide-react';
 import { StudentProgress, CategoryWithSkills, ProgressStats } from '@/lib/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend } from 'recharts';
+import { getStatusColor } from '@/lib/ui-utils';
 
 export default function StudentProgressPage() {
   const [progress, setProgress] = useState<StudentProgress[]>([]);
@@ -18,11 +19,7 @@ export default function StudentProgressPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<string>('all');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [progressResponse, categoriesResponse] = await Promise.all([
         fetch('/api/progress'),
@@ -39,94 +36,105 @@ export default function StudentProgressPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const getFilteredProgress = () => {
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Memoize date cutoff calculation
+  const dateCutoff = useMemo(() => {
+    if (selectedPeriod === 'all') return null;
+
+    const now = new Date();
+    const cutoff = new Date();
+
+    switch (selectedPeriod) {
+      case 'week':
+        cutoff.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        cutoff.setMonth(now.getMonth() - 1);
+        break;
+      case 'quarter':
+        cutoff.setMonth(now.getMonth() - 3);
+        break;
+    }
+
+    return cutoff;
+  }, [selectedPeriod]);
+
+  // Memoize filtered progress
+  const filteredProgress = useMemo(() => {
     let filtered = progress;
 
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(p => p.skill?.categoryId === parseInt(selectedCategory));
+      const categoryId = parseInt(selectedCategory, 10);
+      filtered = filtered.filter(p => p.skill?.categoryId === categoryId);
     }
 
-    if (selectedPeriod !== 'all') {
-      const now = new Date();
-      const cutoff = new Date();
-      
-      switch (selectedPeriod) {
-        case 'week':
-          cutoff.setDate(now.getDate() - 7);
-          break;
-        case 'month':
-          cutoff.setMonth(now.getMonth() - 1);
-          break;
-        case 'quarter':
-          cutoff.setMonth(now.getMonth() - 3);
-          break;
-      }
-      
-      filtered = filtered.filter(p => 
-        p.lastAttemptDate && new Date(p.lastAttemptDate) >= cutoff
+    if (dateCutoff !== null) {
+      filtered = filtered.filter(p =>
+        p.lastAttemptDate && new Date(p.lastAttemptDate) >= dateCutoff
       );
     }
 
     return filtered;
-  };
+  }, [progress, selectedCategory, dateCutoff]);
 
-  const filteredProgress = getFilteredProgress();
+  // Memoize stats calculation
+  const stats = useMemo(() => {
+    const progressWithScores = filteredProgress.filter(p => p.selfAssessmentScore);
 
-  // Calculate stats
-  const stats = {
-    totalSkills: categories.reduce((acc, cat) => acc + cat.skills.length, 0),
-    completedSkills: filteredProgress.filter(p => p.status === 'COMPLETED').length,
-    masteredSkills: filteredProgress.filter(p => p.status === 'MASTERED').length,
-    inProgressSkills: filteredProgress.filter(p => p.status === 'IN_PROGRESS').length,
-    totalTimeSpent: filteredProgress.reduce((acc, p) => acc + p.timeSpentMinutes, 0),
-    averageScore: filteredProgress.filter(p => p.selfAssessmentScore).length > 0 
-      ? filteredProgress.filter(p => p.selfAssessmentScore).reduce((acc, p) => acc + (p.selfAssessmentScore || 0), 0) / filteredProgress.filter(p => p.selfAssessmentScore).length
-      : 0,
-  };
+    return {
+      totalSkills: categories.reduce((acc, cat) => acc + cat.skills.length, 0),
+      completedSkills: filteredProgress.filter(p => p.status === 'COMPLETED').length,
+      masteredSkills: filteredProgress.filter(p => p.status === 'MASTERED').length,
+      inProgressSkills: filteredProgress.filter(p => p.status === 'IN_PROGRESS').length,
+      totalTimeSpent: filteredProgress.reduce((acc, p) => acc + p.timeSpentMinutes, 0),
+      averageScore: progressWithScores.length > 0
+        ? progressWithScores.reduce((acc, p) => acc + (p.selfAssessmentScore || 0), 0) / progressWithScores.length
+        : 0,
+    };
+  }, [filteredProgress, categories]);
 
-  // Chart data
-  const categoryProgressData = categories.map(cat => ({
-    name: cat.name.split(' ')[0], // Shorten names
-    total: cat.skills.length,
-    completed: filteredProgress.filter(p => 
-      p.skill?.categoryId === cat.id && 
-      (p.status === 'COMPLETED' || p.status === 'MASTERED')
-    ).length,
-    inProgress: filteredProgress.filter(p => 
-      p.skill?.categoryId === cat.id && 
-      p.status === 'IN_PROGRESS'
-    ).length,
-  }));
+  // Memoize chart data
+  const categoryProgressData = useMemo(() =>
+    categories.map(cat => ({
+      name: cat.name.split(' ')[0], // Shorten names
+      total: cat.skills.length,
+      completed: filteredProgress.filter(p =>
+        p.skill?.categoryId === cat.id &&
+        (p.status === 'COMPLETED' || p.status === 'MASTERED')
+      ).length,
+      inProgress: filteredProgress.filter(p =>
+        p.skill?.categoryId === cat.id &&
+        p.status === 'IN_PROGRESS'
+      ).length,
+    }))
+  , [categories, filteredProgress]);
 
-  const statusData = [
+  const statusData = useMemo(() => [
     { name: 'Completed', value: stats.completedSkills, color: '#4ade80' },
     { name: 'Mastered', value: stats.masteredSkills, color: '#06b6d4' },
     { name: 'In Progress', value: stats.inProgressSkills, color: '#f59e0b' },
     { name: 'Not Started', value: stats.totalSkills - stats.completedSkills - stats.masteredSkills - stats.inProgressSkills, color: '#6b7280' },
-  ];
+  ], [stats]);
 
-  const timeSpentData = categories.map(cat => ({
-    name: cat.name.split(' ')[0],
-    time: filteredProgress
-      .filter(p => p.skill?.categoryId === cat.id)
-      .reduce((acc, p) => acc + p.timeSpentMinutes, 0),
-  }));
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'COMPLETED': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-      case 'MASTERED': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
-      case 'IN_PROGRESS': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300';
-    }
-  };
+  const timeSpentData = useMemo(() =>
+    categories.map(cat => ({
+      name: cat.name.split(' ')[0],
+      time: filteredProgress
+        .filter(p => p.skill?.categoryId === cat.id)
+        .reduce((acc, p) => acc + p.timeSpentMinutes, 0),
+    }))
+  , [categories, filteredProgress]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-96" role="status" aria-live="polite" aria-busy="true">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" aria-hidden="true"></div>
+        <span className="sr-only">Loading progress data...</span>
       </div>
     );
   }

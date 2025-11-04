@@ -7,26 +7,17 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    // Temporarily allow without authentication for testing
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
 
-    // Mock user data when no session
-    const mockUser = session?.user || {
-      id: 'student-1',
-      name: 'Test Student',
-      email: 'student@test.com',
-      studentId: 'STU001'
-    };
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const { skillId, content, rating, whatWentWell, whatToimprove, futureGoals, isPrivate } = await request.json();
 
     // Mock reflection creation
     const mockReflection = {
       id: `reflection-${Date.now()}`,
-      userId: mockUser.id,
+      userId: session.user.id,
       skillId: skillId,
       content: content,
       rating: rating || 5,
@@ -37,10 +28,10 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       user: {
-        id: mockUser.id,
-        name: mockUser.name,
-        email: mockUser.email,
-        studentId: mockUser.studentId,
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email,
+        studentId: session.user.studentId || '',
       },
       skill: {
         id: skillId,
@@ -63,20 +54,10 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    // Temporarily allow without authentication for testing
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
 
-    // Mock user data when no session
-    const mockUser = session?.user || {
-      id: 'student-1',
-      name: 'Test Student',
-      email: 'student@test.com',
-      role: 'STUDENT',
-      studentId: 'STU001'
-    };
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const { searchParams } = new URL(request.url);
     const skillId = searchParams.get('skillId');
@@ -173,7 +154,7 @@ export async function GET(request: NextRequest) {
       },
       {
         id: 'reflection-4',
-        userId: mockUser.id,
+        userId: session.user.id,
         skillId: 'skill-1',
         content: 'Personal reflection: Working on improving my technique. This session felt much better than last time.',
         rating: 3,
@@ -184,10 +165,10 @@ export async function GET(request: NextRequest) {
         createdAt: new Date(Date.now() - 259200000).toISOString(),
         updatedAt: new Date(Date.now() - 259200000).toISOString(),
         user: {
-          id: mockUser.id,
-          name: mockUser.name,
-          email: mockUser.email,
-          studentId: mockUser.studentId,
+          id: session.user.id,
+          name: session.user.name || '',
+          email: session.user.email || '',
+          studentId: session.user.studentId || '',
         },
         skill: {
           id: 'skill-1',
@@ -217,9 +198,9 @@ export async function GET(request: NextRequest) {
     }
 
     // For students, only show their own private reflections
-    if (mockUser.role === 'STUDENT') {
-      filteredReflections = filteredReflections.filter(r => 
-        r.userId === mockUser.id || !r.isPrivate
+    if (session.user.role === 'STUDENT') {
+      filteredReflections = filteredReflections.filter(r =>
+        r.userId === session.user.id || !r.isPrivate
       );
     }
 
@@ -245,26 +226,17 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    // Temporarily allow without authentication for testing
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
 
-    // Mock user data when no session
-    const mockUser = session?.user || {
-      id: 'student-1',
-      name: 'Test Student',
-      email: 'student@test.com',
-      studentId: 'STU001'
-    };
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const { reflectionId, content, isPrivate } = await request.json();
 
     // Mock reflection update
     const mockUpdatedReflection = {
       id: reflectionId,
-      userId: mockUser.id,
+      userId: session.user.id,
       content: content,
       isPrivate: isPrivate,
       updatedAt: new Date().toISOString(),
@@ -280,11 +252,10 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    // Temporarily allow without authentication for testing
-    // if (!session) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const { reflectionId } = await request.json();
 
